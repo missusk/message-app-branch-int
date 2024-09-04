@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
+const authenticateToken = require('./authMiddleware');
 
 const router = express.Router();
 
@@ -119,6 +120,28 @@ router.post('/customers/login', async (req, res) => {
     catch (err) {
         console.log(err.message);
         res.status(500).json({error: 'Server error, customer login failed'});
+    }
+});
+
+// Protected route tetsing
+
+router.get('/profile', authenticateToken, async (req, res) => {
+    const {user_id, username} = req.user;
+
+    try {
+        const result = await pool.query(
+            'SELECT username FROM users WHERE user_id = $1', [user_id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not foound'});
+        }
+
+        res.json({ profile: result.rows[0]});
+    } 
+
+    catch (err) {
+        console.log(err.message);
+        res.status(500).json({error: 'Server error, unable to fetch user profile'});
     }
 });
 
