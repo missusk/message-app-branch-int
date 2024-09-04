@@ -8,3 +8,5 @@
 
 # Ignore build folder in frontend (if any)
 /frontend/build/
+
+/backend/db.js
