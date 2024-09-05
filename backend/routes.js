@@ -128,6 +128,7 @@ router.get('/messages/:user_id', authenticateToken, async (req, res) => {
 
 router.post('/messages/send', authenticateToken, async (req, res) => {
   const { user_id } = req.user;
+  console.log(user_id);
   const { message_body } = req.body;
 
   try {

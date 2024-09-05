@@ -58,8 +58,9 @@ const Chat = () => {
   };
 
   return (
-    <div>
-        <div className="chat-history">
+    <div className='user'>
+        <h1>Chat with an Agent</h1>
+        <div className="chat-history-user">
         {messages.map((message, index) => (
             <div 
             key={index} 

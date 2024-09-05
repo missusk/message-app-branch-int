@@ -10,25 +10,11 @@ const AgentChat = () => {
   const [activeUser, setActiveUser] = useState(userId);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const token = localStorage.getItem('token'); 
+  const [searchTerm, setSearchTerm] = useState('');
+  const token = localStorage.getItem('token');
+
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch assigned users
-    const fetchAssignedUsers = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/agents/assigned-users', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setAssignedUsers(response.data.users); // Now contains user_id and username
-      } catch (err) {
-        console.error('Error fetching assigned users:', err);
-      }
-    };
-        
-    // Fetch unassigned messages
     const fetchUnassignedMessages = async () => {
       try {
         const response = await axios.get('http://localhost:5000/unassigned-messages', {
@@ -36,23 +22,37 @@ const AgentChat = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setUnassignedMessages(response.data.unassignedMessages); // Now contains username
+        setUnassignedMessages(response.data.unassignedMessages);
       } catch (err) {
         console.error('Error fetching unassigned messages:', err);
       }
     };
 
-    fetchAssignedUsers();
-    fetchUnassignedMessages();
-  }, [token]);
+    const fetchAssignedUsers = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/agents/assigned-users', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setAssignedUsers(response.data.users);
+      } catch (err) {
+        console.error('Error fetching assigned users:', err);
+      }
+    };
 
-  // Fetch unique unassigned users for display
-  const uniqueUnassignedUsers = unassignedMessages.reduce((unique, message) => {
-    if (!unique.some((u) => u.user_id === message.user_id)) {
-      unique.push(message);
-    }
-    return unique;
-  }, []);
+    useEffect(() => {
+        fetchAssignedUsers();
+        fetchUnassignedMessages();
+    }, [token]);
+
+    // Fetch unique unassigned users for display
+    const uniqueUnassignedUsers = unassignedMessages.reduce((unique, user) => {
+        if (!unique.some((u) => u.user_id === user.user_id)) {
+        unique.push(user);
+        }
+        return unique;
+    }, []);
 
   // Fetch chat history when activeUser changes
   useEffect(() => {
@@ -73,98 +73,103 @@ const AgentChat = () => {
       fetchChatHistory();
     }
   }, [activeUser, token]);
-
+  
   // Handle selecting a user from the list
   const handleUserSelect = (userId) => {
     setActiveUser(userId); 
     navigate(`/agent/chat/${userId}`); 
   };
 
-  // Handle sending a message for both assigned and unassigned users
-  const handleSendMessage = async () => {
-    try {
-      if (isUserUnassigned(activeUser)) {
-        // Respond and assign if unassigned
-        await axios.post(
-          `http://localhost:5000/respond-and-assign`,
-          { user_id: activeUser, response_body: newMessage },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        // Move the user from unassigned to assigned
-        const updatedUnassigned = unassignedMessages.filter(message => message.user_id !== activeUser);
-        setUnassignedMessages(updatedUnassigned);
-        setAssignedUsers(prevAssignedUsers => [...prevAssignedUsers, { user_id: activeUser }]);
-      } else {
-        // Respond to assigned user
-        await axios.post(
-          `http://localhost:5000/messages/respond-by-user`,
-          { user_id: activeUser, response_body: newMessage },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+  // Handle sending a message
+const handleSendMessage = async () => {
+  try {
+    const unassignedUser = unassignedMessages.find((message) => message.user_id === activeUser);
+    const endpoint = unassignedUser ? '/respond-and-assign' : '/messages/respond-by-user';
+
+    const response = await axios.post(
+      `http://localhost:5000${endpoint}`,
+      { user_id: activeUser, response_body: newMessage },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
       }
+    );
 
-      // Clear message input
-      setNewMessage('');
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { message_body: newMessage, sender: 'agent' }, 
-      ]);
-    } catch (err) {
-      console.error('Error sending message:', err);
+    setNewMessage(''); 
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { message_body: newMessage, sender: 'agent' }
+    ]);
+
+    // If the user was unassigned, move them to the assigned list
+    if (unassignedUser) {
+      await fetchAssignedUsers();
+      await fetchUnassignedMessages();
     }
-  };
 
-  // Check if a user is unassigned
-  const isUserUnassigned = (userId) => {
-    return uniqueUnassignedUsers.some(user => user.user_id === userId);
-  };
+  } catch (err) {
+    console.error('Error sending message:', err);
+  }
+};
+
+
+// Filter assigned users and unassigned users based on the search term
+const filteredAssignedUsers = assignedUsers.filter((user) =>
+  user.username?.toLowerCase().includes(searchTerm.toLowerCase()) 
+);
+
+const filteredUnassignedUsers = uniqueUnassignedUsers.filter((message) =>
+  message.username?.toLowerCase().includes(searchTerm.toLowerCase())
+);
 
   return (
     <div className="chat-container">
       <div className="left-pane">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
         <h3>Assigned Chats</h3>
         <div className="assigned-chats">
-          {assignedUsers.map((user) => (
+          {filteredAssignedUsers.map((user) => (
             <button
               key={user.user_id}
               className={`chat-button ${activeUser === user.user_id ? 'active' : ''}`}
               onClick={() => handleUserSelect(user.user_id)}
             >
-              {user.username} {/* Now displaying username */}
+              {user.username}
             </button>
           ))}
         </div>
 
         <h3>Unassigned Chats</h3>
         <div className="unassigned-chats">
-          {uniqueUnassignedUsers.map((message) => (
+          {filteredUnassignedUsers.map((message) => (
             <button
-              key={message.user_id}
+              key={message.message_id}
               className={`chat-button ${activeUser === message.user_id ? 'active' : ''}`}
               onClick={() => handleUserSelect(message.user_id)}
             >
-              {message.username} {/* Now displaying username */}
+              {message.username}
             </button>
           ))}
         </div>
       </div>
 
       <div className="chat-card">
+        <h2>Chat</h2>
         <div className="chat-history">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`message ${message.sender === 'user' ? 'agent-message' : 'user-message'}`}
+              className={`message ${message.sender === 'agent' ? 'user-message' : 'agent-message'}`}
             >
-              <p className="text-in-message">{message.message_body}</p>
+              <p className='text-in-message'>{message.message_body}</p>
             </div>
           ))}
         </div>
