@@ -1,0 +1,32 @@
+.landing-page {
+  text-align: center;
+  padding: 50px;
+}
+
+.role-cards {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.role-card {
+  border: 1px solid #ccc;
+  padding: 20px;
+  width: 250px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: box-shadow 0.3s;
+}
+
+.role-card:hover {
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #5cb85c;
+  color: white;
+  cursor: pointer;
+}

@@ -1,0 +1,67 @@
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f5f5f5; 
+}
+
+.auth-card {
+  width: 400px;
+  height: 400px;
+  padding: 20px 40px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  border-radius: 8px; 
+  text-align: center;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #ccc;
+}
+
+button {
+  padding: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: bold;
+  color: #007bff; 
+}
+
+button.active {
+  border-bottom: 2px solid #007bff; 
+  color: #007bff;
+}
+
+.form-content {
+  margin-top: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+button[type="submit"] {
+  width: 100%;
+  padding: 17px;
+  margin-top: 20px;
+  border: none;
+  background-color: #28a745; 
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background-color: #218838;
+}

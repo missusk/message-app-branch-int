@@ -1,15 +1,14 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import SignUp from './components/SignUp';
-import SignIn from './components/SignIn';
+import LandingPage from './components/LandingPage';
+import AuthPage from './components/AuthPage';
 
 function App() {
   return (
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/signup/:role" element={<SignUp />} />
-          <Route path="/login/customers" element={<SignIn role="customers" />} />
-          <Route path="/login/agents" element={<SignIn role="agents" />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth/:role" element={<AuthPage />} />
         </Routes>
       </div>
     </Router>
