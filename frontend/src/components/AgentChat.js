@@ -94,6 +94,10 @@ const AgentChat = () => {
             },
           }
         );
+        // Move the user from unassigned to assigned
+        const updatedUnassigned = unassignedMessages.filter(message => message.user_id !== activeUser);
+        setUnassignedMessages(updatedUnassigned);
+        setAssignedUsers(prevAssignedUsers => [...prevAssignedUsers, { user_id: activeUser }]);
       } else {
         // Respond to assigned user
         await axios.post(
@@ -106,7 +110,8 @@ const AgentChat = () => {
           }
         );
       }
-      
+
+      // Clear message input
       setNewMessage('');
       setMessages((prevMessages) => [
         ...prevMessages,
