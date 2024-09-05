@@ -7,138 +7,129 @@ const authenticateToken = require('./authMiddleware');
 const router = express.Router();
 
 // Agent Signup Route
-
 router.post('/agents/signup', async (req, res) => {
-    const { username, password } = req.body;
-
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await pool.query(
-            'INSERT INTO agents (username, password) VALUES ($1, $2) RETURNING *',
-            [username, hashedPassword]
-        );
-
-        res.status(201).json({message: 'Agent created successfully', agent: result.rows[0]});
-    }
-
-    catch (err) {
-        console.log(err.message);
-        resizeTo.status(500).json({error: 'Server error, agent registration failed'});
-    }
-
+  const { username, password } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO agents (username, password) VALUES ($1, $2) RETURNING *',
+      [username, hashedPassword]
+    );
+    res.status(201).json({ message: 'Agent created successfully', agent: result.rows[0] });
+  } catch (err) {
+    console.error('Error in agent signup:', err.message);
+    res.status(500).json({ error: 'Server error, agent registration failed' });
+  }
 });
-
 
 // Customer Signup Route
 
 router.post('/customers/signup', async (req, res) => {
-    const {username, password} = req.body;
-
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await pool.query(
-            'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *',
-            [username, hashedPassword]
-        );
-        res.status(201).json({message: 'Customer created successfully', user: result.rows[0]});
-    }
-
-    catch (err) {
-        console.log(err.message);
-        res.status(500).json({error: 'Server error, customer registration failed'});
-    }
+  const { username, password } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *',
+      [username, hashedPassword]
+    );
+    res.status(201).json({ message: 'Customer created successfully', user: result.rows[0] });
+  } catch (err) {
+    console.error('Error in customer signup:', err.message);
+    res.status(500).json({ error: 'Server error, customer registration failed' });
+  }
 });
 
-
-// Agent Login Route
+// Agent Login
 router.post('/agents/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    try {
-        const result = await pool.query('SELECT * FROM agents WHERE username = $1', [username]);
-
-        if (result.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid username or password' });
-        }
-
-        const agent = result.rows[0];
-        const isPasswordValid = await bcrypt.compare(password, agent.password);
-
-        if (!isPasswordValid) {
-            return res.status(400).json({ error: 'Invalid username or password' });
-        }
-
-        const token = jwt.sign(
-            { agent_id: agent.agent_id, username: agent.username },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({ message: 'Agent logged in successfully', token });
-    } catch (err) {
-        console.error('Error in agent login:', err.message); 
-        res.status(500).json({ error: 'Server error, agent login failed' });
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM agents WHERE username = $1', [username]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid username or password' });
     }
+    const agent = result.rows[0];
+    const isPasswordValid = await bcrypt.compare(password, agent.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: 'Invalid username or password' });
+    }
+    const token = jwt.sign(
+      { agent_id: agent.agent_id, username: agent.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ message: 'Agent logged in successfully', token, agent_id: agent.agent_id });
+  } catch (err) {
+    console.error('Error in agent login:', err.message);
+    res.status(500).json({ error: 'Server error, agent login failed' });
+  }
 });
 
-// Customer Login Route
+// Customer Login
 router.post('/customers/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-
-        if (result.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid username or password' });
-        }
-
-        const user = result.rows[0];
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-            return res.status(400).json({ error: 'Invalid username or password' });
-        }
-
-        const token = jwt.sign(
-            { user_id: user.user_id, username: user.username },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({ message: 'Customer logged in successfully', token });
-    } catch (err) {
-        console.error('Error in customer login:', err.message); 
-        res.status(500).json({ error: 'Server error, customer login failed' });
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid username or password' });
     }
+    const user = result.rows[0];
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: 'Invalid username or password' });
+    }
+    const token = jwt.sign(
+      { user_id: user.user_id, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ message: 'Customer logged in successfully', token, user_id: user.user_id });
+  } catch (err) {
+    console.error('Error in customer login:', err.message);
+    res.status(500).json({ error: 'Server error, customer login failed' });
+  }
 });
 
-// Protected route tetsing
+// Chat Routes - Fetch chat history
+router.get('/messages/:user_id', authenticateToken, async (req, res) => {
+  const { user_id } = req.params;
+  console.log('Received user_id:', user_id);
+  try {
+    // Fetch user messages
+    const userMessages = await pool.query(
+      'SELECT message_body, timestamp, \'user\' as sender FROM messages WHERE user_id = $1 ORDER BY timestamp ASC',
+      [user_id]
+    );
 
-router.get('/profile', authenticateToken, async (req, res) => {
-    const {user_id, username} = req.user;
+    // Fetch agent responses for the user
+    const agentResponses = await pool.query(
+      `SELECT r.response_body as message_body, r.timestamp, 'agent' as sender 
+       FROM responses r 
+       INNER JOIN messages m ON r.message_id = m.message_id 
+       WHERE m.user_id = $1 
+       ORDER BY r.timestamp ASC`,
+      [user_id]
+    );
 
-    try {
-        const result = await pool.query(
-            'SELECT username FROM users WHERE user_id = $1', [user_id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not foound'});
-        }
+    // Merge the user messages and agent responses
+    const allMessages = [...userMessages.rows, ...agentResponses.rows];
 
-        res.json({ profile: result.rows[0]});
-    } 
+    // Sort all messages chronologically
+    allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-    catch (err) {
-        console.log(err.message);
-        res.status(500).json({error: 'Server error, unable to fetch user profile'});
-    }
+    res.json({ messages: allMessages });
+  } catch (err) {
+    console.error('Error fetching messages and responses:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// Send message by customer route
 
-router.post('/messages', authenticateToken, async (req, res) => {
-  const { user_id } = req.user;  
-  const { message_body } = req.body;  
+
+//send message
+
+router.post('/messages/send', authenticateToken, async (req, res) => {
+  const { user_id } = req.user;
+  const { message_body } = req.body;
 
   try {
     const lastAssignedMessage = await pool.query(
@@ -146,7 +137,7 @@ router.post('/messages', authenticateToken, async (req, res) => {
       [user_id, 'assigned']
     );
 
-    let agentId = null; 
+    let agentId = null;
     if (lastAssignedMessage.rows.length > 0) {
       agentId = lastAssignedMessage.rows[0].agent_id;
     }
@@ -166,11 +157,11 @@ router.post('/messages', authenticateToken, async (req, res) => {
 
 // Agent views unassigned messages route
 
-router.get('/messages/unassigned', authenticateToken, async (req, res) => {
-    const {agent_id} = req.user;
+router.get('/unassigned-messages', authenticateToken, async (req, res) => {
+    const { agent_id } = req.user;
 
     if (!agent_id) {
-        return res.status(403).json({error: 'Access denied, only agents can view unassigned messages'});
+        return res.status(403).json({ error: 'Access denied, only agents can view unassigned messages' });
     }
 
     try {
@@ -178,17 +169,17 @@ router.get('/messages/unassigned', authenticateToken, async (req, res) => {
             'SELECT * FROM messages WHERE status = $1',
             ['unassigned']
         );
-        res.json({unassignedMessages: result.rows});
+        res.json({ unassignedMessages: result.rows });
     }
     catch (err) {
         console.log(err.message);
-        res.status(500).json({error: 'Server error, unable to fetch unassigned messages'});
+        res.status(500).json({ error: 'Server error, unable to fetch unassigned messages' });
     }
 });
 
-// Agent assigns message and respond route
 
-router.post('/messages/respond-and-assign', authenticateToken, async (req, res) => {
+// Agent assigns message and respond route
+router.post('/respond-and-assign', authenticateToken, async (req, res) => {
   const { agent_id } = req.user;  
   const { user_id, response_body } = req.body;  
 
@@ -223,7 +214,6 @@ router.post('/messages/respond-and-assign', authenticateToken, async (req, res) 
   }
 });
 
-
 // Agent responds to an already assigned message
 
 router.post('/messages/respond-by-user', authenticateToken, async (req, res) => {
@@ -253,6 +243,28 @@ router.post('/messages/respond-by-user', authenticateToken, async (req, res) => 
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Fetch assigned users for an agent
+
+router.get('/agents/assigned-users', authenticateToken, async (req, res) => {
+  const { agent_id } = req.user;
+
+  if (!agent_id) {
+    return res.status(403).json({ error: 'Access denied, missing agent ID' });
+  }
+
+  try {
+    // Fetching distinct users that are assigned to this agent from the messages table
+    const result = await pool.query(
+      'SELECT DISTINCT user_id FROM messages WHERE agent_id = $1 AND status = $2',
+      [agent_id, 'assigned']
+    );
+    res.json({ users: result.rows });
+  } catch (err) {
+    console.error('Error fetching assigned users:', err.message, err.stack);
+    res.status(500).json({ error: 'Server error fetching assigned users' });
   }
 });
 

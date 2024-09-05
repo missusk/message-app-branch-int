@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const SignIn = ({ role }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -11,18 +13,29 @@ const SignIn = ({ role }) => {
     try {
       const response = await axios.post(`http://localhost:5000/${role}/login`, {
         username,
-        password
+        password,
       });
 
       if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        alert('Login successful!');
+        localStorage.setItem("token", response.data.token);
+        const userId = response.data.user_id || response.data.agent_id; 
+        localStorage.setItem("userId", userId);  
+        alert("Login successful!");
+
+        
+        if (role === 'customers') {
+          // Redirect customers to the user chat page
+          navigate(`/chat/${userId}`);
+        } else if (role === 'agents') {
+          // Redirect agents to the agent chat page
+          navigate(`/agent/chat/new`);
+        }
       } else {
-        alert('Login failed. Please try again.');
+        alert("Login failed. Please try again.");
       }
     } catch (err) {
-      console.error('Login failed:', err.response ? err.response.data : err.message);
-      alert('Login failed. Please try again.');
+      console.error("Login failed:", err.response ? err.response.data : err.message);
+      alert("Login failed. Please try again.");
     }
   };
 

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
 const SignUp = () => {
-  const { role } = useParams(); // Get the role from the URL (customers or agents)
+  const { role } = useParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
