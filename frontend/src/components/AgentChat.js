@@ -17,9 +17,7 @@ const AgentChat = () => {
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
-  // Fetch assigned and unassigned users
-  useEffect(() => {
-    const fetchAssignedUsers = async () => {
+      const fetchAssignedUsers = async () => {
       try {
         const response = await axios.get('http://localhost:5000/agents/assigned-users', {
           headers: {
@@ -44,12 +42,12 @@ const AgentChat = () => {
         console.error('Error fetching unassigned messages:', err);
       }
     };
-
+  
+  useEffect(() => {
     fetchAssignedUsers();
     fetchUnassignedMessages();
   }, [token]);
 
-  // Fetch unique unassigned users for display
   const uniqueUnassignedUsers = unassignedMessages.reduce((unique, user) => {
     if (!unique.some((u) => u.user_id === user.user_id)) {
       unique.push(user);
@@ -57,7 +55,7 @@ const AgentChat = () => {
     return unique;
   }, []);
 
-  // Fetch chat history whenever activeUser changes
+
   useEffect(() => {
     if (activeUser) {
       const fetchChatHistory = async () => {
@@ -78,60 +76,65 @@ const AgentChat = () => {
   }, [activeUser, token]);
 
   // Handle selecting a user from the list and immediately update activeUser
+
   const handleUserSelect = (userId) => {
     setActiveUser(userId);  
     navigate(`/agent/chat/${userId}`);  
   };
 
-  // Handle sending a message
   const handleSendMessage = async () => {
-    try {
-      const isUnassigned = unassignedMessages.some((message) => message.user_id === activeUser);
-      const endpoint = isUnassigned ? '/respond-and-assign' : '/messages/respond-by-user';
+  try {
+    const isUnassigned = unassignedMessages.some((message) => message.user_id === activeUser);
+    const endpoint = isUnassigned ? '/respond-and-assign' : '/messages/respond-by-user';
 
-      const response = await axios.post(
-        `http://localhost:5000${endpoint}`,
-        { user_id: activeUser, response_body: newMessage },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          }
+    const response = await axios.post(
+      `http://localhost:5000${endpoint}`,
+      { user_id: activeUser, response_body: newMessage },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
         }
-      );
-
-      if (isUnassigned) {
-        setAssignedUsers((prevAssigned) => [
-          ...prevAssigned,
-          { user_id: activeUser, username: response.data.username }
-        ]);
-
-        setUnassignedMessages((prevUnassigned) =>
-          prevUnassigned.filter((message) => message.user_id !== activeUser)
-        );
       }
+    );
 
-      setNewMessage(''); 
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { message_body: newMessage, sender: 'agent' }
+    if (isUnassigned) {
+      // Update assigned users
+      setAssignedUsers((prevAssigned) => [
+        ...prevAssigned,
+        { user_id: activeUser, username: response.data.username } // Ensure that `response.data.username` is correct
       ]);
 
-    } catch (err) {
-      console.error('Error sending message:', err);
+      // Remove from unassigned users
+      setUnassignedMessages((prevUnassigned) =>
+        prevUnassigned.filter((message) => message.user_id !== activeUser)
+      );
+
+      fetchAssignedUsers(); 
     }
-  };
+
+    // Reset the message input field and add the new message to the chat
+    setNewMessage(''); 
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { message_body: newMessage, sender: 'agent' }
+    ]);
+
+  } catch (err) {
+    console.error('Error sending message:', err);
+  }
+};
 
   // Filter assigned users and unassigned users based on the search term
   const filteredAssignedUsers = assignedUsers.filter((user) =>
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    user.username?.toLowerCase().includes(searchTerm?.toLowerCase())
   );
 
   const filteredUnassignedUsers = uniqueUnassignedUsers.filter((message) =>
-    message.username.toLowerCase().includes(searchTerm.toLowerCase())
+    message.username?.toLowerCase().includes(searchTerm?.toLowerCase())
   );
 
   const filteredMessages = messages.filter((message) =>
-    message.message_body.toLowerCase().includes(messageSearchTerm.toLowerCase())
+    message.message_body?.toLowerCase().includes(messageSearchTerm?.toLowerCase())
   );
 
   return (
