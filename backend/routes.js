@@ -92,7 +92,6 @@ router.post('/customers/login', async (req, res) => {
 // Chat Routes - Fetch chat history
 router.get('/messages/:user_id', authenticateToken, async (req, res) => {
   const { user_id } = req.params;
-  console.log('Received user_id:', user_id);
   try {
     // Fetch user messages
     const userMessages = await pool.query(
@@ -166,11 +165,14 @@ router.get('/unassigned-messages', authenticateToken, async (req, res) => {
 
     try {
         const result = await pool.query(
-            'SELECT * FROM messages WHERE status = $1',
-            ['unassigned']
-        );
-        res.json({ unassignedMessages: result.rows });
-    }
+        `SELECT u.user_id, u.username, m.message_id 
+        FROM messages m 
+        JOIN users u ON u.user_id = m.user_id 
+        WHERE m.status = $1`,
+        ['unassigned']
+      );
+      res.json({ unassignedMessages: result.rows });
+  }
     catch (err) {
         console.log(err.message);
         res.status(500).json({ error: 'Server error, unable to fetch unassigned messages' });
@@ -179,6 +181,7 @@ router.get('/unassigned-messages', authenticateToken, async (req, res) => {
 
 
 // Agent assigns message and respond route
+
 router.post('/respond-and-assign', authenticateToken, async (req, res) => {
   const { agent_id } = req.user;  
   const { user_id, response_body } = req.body;  
@@ -258,7 +261,10 @@ router.get('/agents/assigned-users', authenticateToken, async (req, res) => {
   try {
     // Fetching distinct users that are assigned to this agent from the messages table
     const result = await pool.query(
-      'SELECT DISTINCT user_id FROM messages WHERE agent_id = $1 AND status = $2',
+      `SELECT DISTINCT u.user_id, u.username
+       FROM messages m
+       JOIN users u ON u.user_id = m.user_id
+       WHERE m.agent_id = $1 AND m.status = $2`,
       [agent_id, 'assigned']
     );
     res.json({ users: result.rows });

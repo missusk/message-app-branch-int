@@ -22,7 +22,7 @@ const AgentChat = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setAssignedUsers(response.data.users);
+        setAssignedUsers(response.data.users); // Now contains user_id and username
       } catch (err) {
         console.error('Error fetching assigned users:', err);
       }
@@ -36,7 +36,7 @@ const AgentChat = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setUnassignedMessages(response.data.unassignedMessages);
+        setUnassignedMessages(response.data.unassignedMessages); // Now contains username
       } catch (err) {
         console.error('Error fetching unassigned messages:', err);
       }
@@ -138,7 +138,7 @@ const AgentChat = () => {
               className={`chat-button ${activeUser === user.user_id ? 'active' : ''}`}
               onClick={() => handleUserSelect(user.user_id)}
             >
-              User {user.user_id}
+              {user.username} {/* Now displaying username */}
             </button>
           ))}
         </div>
@@ -151,7 +151,7 @@ const AgentChat = () => {
               className={`chat-button ${activeUser === message.user_id ? 'active' : ''}`}
               onClick={() => handleUserSelect(message.user_id)}
             >
-              User {message.user_id}
+              {message.username} {/* Now displaying username */}
             </button>
           ))}
         </div>
@@ -162,7 +162,7 @@ const AgentChat = () => {
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`message ${message.sender === 'agent' ? 'user-message' : 'agent-message'}`}
+              className={`message ${message.sender === 'user' ? 'agent-message' : 'user-message'}`}
             >
               <p className="text-in-message">{message.message_body}</p>
             </div>

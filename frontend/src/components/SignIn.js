@@ -28,7 +28,7 @@ const SignIn = ({ role }) => {
           navigate(`/chat/${userId}`);
         } else if (role === 'agents') {
           // Redirect agents to the agent chat page
-          navigate(`/agent/chat/new`);
+          navigate(`/agent/chat/0`);
         }
       } else {
         alert("Login failed. Please try again.");
