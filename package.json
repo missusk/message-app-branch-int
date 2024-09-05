@@ -1,0 +1,18 @@
+{
+  "name": "message-app-branch-int",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm --prefix frontend install && npm --prefix backend install",
+    "start:frontend": "npm --prefix frontend start",
+    "start:backend": "npm --prefix backend start",
+    "start:all": "concurrently \"npm --prefix frontend start\" \"npm --prefix backend start\""
+  },
+  "keywords": [],
+  "author": "Maria Khan",
+  "license": "MIT",
+  "description": "",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

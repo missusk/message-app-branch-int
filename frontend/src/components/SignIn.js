@@ -20,8 +20,6 @@ const SignIn = ({ role }) => {
         localStorage.setItem("token", response.data.token);
         const userId = response.data.user_id || response.data.agent_id; 
         localStorage.setItem("userId", userId);  
-        alert("Login successful!");
-
         
         if (role === 'customers') {
           // Redirect customers to the user chat page

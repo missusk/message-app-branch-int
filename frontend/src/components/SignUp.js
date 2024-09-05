@@ -17,7 +17,7 @@ const SignUp = () => {
       });
 
       if (response.status === 201) {
-        alert('Sign up successful!');
+        alert('Sign up successful! Please log in.');
       } else {
         alert('Sign up failed. Please try again.');
       }
