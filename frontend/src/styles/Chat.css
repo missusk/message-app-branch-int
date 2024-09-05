@@ -162,3 +162,26 @@ h3 {
 .text-in-message {
     margin: 10px 10px;
 }
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1A2B6D; /* Adjust according to your header color */
+  padding: 10px;
+  color: white;
+  position: relative;
+}
+
+.search-icon {
+  font-size: 20px; /* Adjust size of the search icon */
+  margin-right: 10px;
+}
+
+.message-search-input {
+  width: 200px; /* Adjust width of the search input */
+  padding: 13px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  outline: none;
+}
