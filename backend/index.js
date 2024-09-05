@@ -1,12 +1,13 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const routes = require('./routes');
-
+const cors = require('cors');
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 
+app.use(cors());
+app.use(express.json());
 app.use('/', routes);
 
 app.get('/test', async (req, res) => {
