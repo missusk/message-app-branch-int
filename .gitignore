@@ -3,9 +3,5 @@
 /backend/node_modules/
 /node_modules
 
-# Ignore environment variables in both frontend and backend
-/frontend/.env
-/backend/.env
-
 # Ignore build folder in frontend (if any)
 /frontend/build/
