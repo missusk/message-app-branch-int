@@ -5,7 +5,7 @@ import '../styles/Chat.css';
 import { FaSearch } from 'react-icons/fa'; 
 import io from 'socket.io-client';
 
-const socket = io(`${process.env.REACT_APP_API_URL}`, {
+const socket = io('http://localhost:5000', {
   withCredentials: true,
   transports: ['websocket'],
 });
@@ -25,7 +25,7 @@ const AgentChat = () => {
 
       const fetchAssignedUsers = async () => {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/agents/assigned-users`, {
+        const response = await axios.get('http://localhost:5000/agents/assigned-users', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -39,7 +39,7 @@ const AgentChat = () => {
 
     const fetchUnassignedMessages = async () => {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/unassigned-messages`, {
+        const response = await axios.get('http://localhost:5000/unassigned-messages', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -80,7 +80,7 @@ const AgentChat = () => {
     if (activeUser) {
       const fetchChatHistory = async () => {
         try {
-          const response = await axios.get(`${process.env.REACT_APP_API_URL}/messages/${activeUser}`, {
+          const response = await axios.get(`http://localhost:5000/messages/${activeUser}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -109,7 +109,7 @@ const AgentChat = () => {
     const endpoint = isUnassigned ? '/respond-and-assign' : '/messages/respond-by-user';
 
     const response = await axios.post(
-      `${process.env.REACT_APP_API_URL}${endpoint}`,
+      `http://localhost:5000${endpoint}`,
       { user_id: activeUser, response_body: newMessage },
       {
         headers: {
@@ -149,7 +149,7 @@ const AgentChat = () => {
 };
 
   // Filter assigned users and unassigned users based on the search term
-
+  
   const filteredAssignedUsers = assignedUsers.filter((user) =>
     user.username?.toLowerCase().includes(searchTerm?.toLowerCase())
   );
