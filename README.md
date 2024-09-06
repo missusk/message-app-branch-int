@@ -60,6 +60,7 @@ This will allow your app to connect to your own custom database instead of the p
 To run both the frontend and backend servers simultaneously, use:
 
 ```
+npm install concurrently --save
 npm run start:all
 ```
 
