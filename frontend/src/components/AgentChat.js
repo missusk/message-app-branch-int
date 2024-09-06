@@ -3,6 +3,12 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/Chat.css'; 
 import { FaSearch } from 'react-icons/fa'; 
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:5000', {
+  withCredentials: true,
+  transports: ['websocket'],
+});
 
 const AgentChat = () => {
   const { userId } = useParams(); 
@@ -23,6 +29,7 @@ const AgentChat = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          withCredentials: true
         });
         setAssignedUsers(response.data.users);
       } catch (err) {
@@ -36,6 +43,7 @@ const AgentChat = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          withCredentials: true
         });
         setUnassignedMessages(response.data.unassignedMessages);
       } catch (err) {
@@ -47,6 +55,18 @@ const AgentChat = () => {
     fetchAssignedUsers();
     fetchUnassignedMessages();
   }, [token]);
+
+  // socket.io to update messages in real time
+
+  useEffect(() => {
+    socket.on('new_message', (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+    
+    return () => {
+      socket.off('new_message');
+    };
+  }, []);
 
   const uniqueUnassignedUsers = unassignedMessages.reduce((unique, user) => {
     if (!unique.some((u) => u.user_id === user.user_id)) {
@@ -64,6 +84,7 @@ const AgentChat = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            withCredentials: true
           });
           setMessages(response.data.messages);
         } catch (err) {
@@ -75,7 +96,7 @@ const AgentChat = () => {
     }
   }, [activeUser, token]);
 
-  // Handle selecting a user from the list and immediately update activeUser
+  // open chat history from left menu
 
   const handleUserSelect = (userId) => {
     setActiveUser(userId);  
@@ -93,18 +114,19 @@ const AgentChat = () => {
       {
         headers: {
           Authorization: `Bearer ${token}`,
-        }
+        },
+        withCredentials: true
       }
     );
 
+    // change position of user from unassigned to assigned
+
     if (isUnassigned) {
-      // Update assigned users
       setAssignedUsers((prevAssigned) => [
         ...prevAssigned,
-        { user_id: activeUser, username: response.data.username } // Ensure that `response.data.username` is correct
+        { user_id: activeUser, username: response.data.username }
       ]);
 
-      // Remove from unassigned users
       setUnassignedMessages((prevUnassigned) =>
         prevUnassigned.filter((message) => message.user_id !== activeUser)
       );
@@ -112,8 +134,10 @@ const AgentChat = () => {
       fetchAssignedUsers(); 
     }
 
-    // Reset the message input field and add the new message to the chat
     setNewMessage(''); 
+
+    // show sent message in chat
+
     setMessages((prevMessages) => [
       ...prevMessages,
       { message_body: newMessage, sender: 'agent' }
@@ -125,6 +149,7 @@ const AgentChat = () => {
 };
 
   // Filter assigned users and unassigned users based on the search term
+  
   const filteredAssignedUsers = assignedUsers.filter((user) =>
     user.username?.toLowerCase().includes(searchTerm?.toLowerCase())
   );

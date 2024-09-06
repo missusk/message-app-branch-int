@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/Chat.css'; // Optional for styling
+import '../styles/Chat.css'; 
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:5000', {
+  withCredentials: true,
+  transports: ['websocket'],
+});
 
 const Chat = () => {
-  const { userId } = useParams(); // Get userId from the URL
+  const { userId } = useParams(); 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const token = localStorage.getItem('token'); // Get the stored token
+  const token = localStorage.getItem('token'); 
 
-  // Fetch chat history when the component mounts
   useEffect(() => {
     const fetchChatHistory = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/messages/${userId}`, {
+        const response = await axios.get(`http://localhost:5000/messages/${userId}`, {   
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          withCredentials: true
         });
         setMessages(response.data.messages);
       } catch (err) {
@@ -27,29 +33,40 @@ const Chat = () => {
     fetchChatHistory();
   }, [userId, token]);
 
-  // Handle sending a message
+  // socket.io to update messages in real time
+
+  useEffect(() => {
+
+    socket.on('message', (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+    return () => {
+      socket.off('message');
+    };
+  }, []);
+
   const handleSendMessage = async () => {
     try {
-      // Send the message to the server
       const response = await axios.post(
         `http://localhost:5000/messages/send`,
         { message_body: newMessage },
-        {
+        { 
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          withCredentials: true
         }
       );
       
-      // Clear the input after sending the message
       setNewMessage('');
 
-      // Add the newly sent message to the state to reflect it in the chat UI
+      // Update the chat history with the new message
+      
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           message_body: newMessage,
-          sender: 'user', // Mark this as sent by the user
+          sender: 'user',
         },
       ]);
     } catch (err) {

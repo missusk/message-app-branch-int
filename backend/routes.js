@@ -3,8 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
 const authenticateToken = require('./authMiddleware');
-
 const router = express.Router();
+
+module.exports = (io) => {
 
 // Agent Signup Route
 router.post('/agents/signup', async (req, res) => {
@@ -90,81 +91,82 @@ router.post('/customers/login', async (req, res) => {
 });
 
 // Chat Routes - Fetch chat history
-router.get('/messages/:user_id', authenticateToken, async (req, res) => {
-  const { user_id } = req.params;
-  try {
-    // Fetch user messages
-    const userMessages = await pool.query(
-      'SELECT message_body, timestamp, \'user\' as sender FROM messages WHERE user_id = $1 ORDER BY timestamp ASC',
-      [user_id]
-    );
 
-    // Fetch agent responses for the user
-    const agentResponses = await pool.query(
-      `SELECT r.response_body as message_body, r.timestamp, 'agent' as sender 
-       FROM responses r 
-       INNER JOIN messages m ON r.message_id = m.message_id 
-       WHERE m.user_id = $1 
-       ORDER BY r.timestamp ASC`,
-      [user_id]
-    );
+  router.get('/messages/:user_id', authenticateToken, async (req, res) => {
+    const { user_id } = req.params;
+    try {
+      // Fetch user messages
+      const userMessages = await pool.query(
+        'SELECT message_body, timestamp, \'user\' as sender FROM messages WHERE user_id = $1 ORDER BY timestamp ASC',
+        [user_id]
+      );
 
-    // Merge the user messages and agent responses
-    const allMessages = [...userMessages.rows, ...agentResponses.rows];
+      // Fetch agent responses for the user
+      const agentResponses = await pool.query(
+        `SELECT r.response_body as message_body, r.timestamp, 'agent' as sender 
+         FROM responses r 
+         INNER JOIN messages m ON r.message_id = m.message_id 
+         WHERE m.user_id = $1 
+         ORDER BY r.timestamp ASC`,
+        [user_id]
+      );
 
-    // Sort all messages chronologically
-    allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      // Merge the user messages and agent responses
+      const allMessages = [...userMessages.rows, ...agentResponses.rows];
 
-    res.json({ messages: allMessages });
-  } catch (err) {
-    console.error('Error fetching messages and responses:', err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+      // Sort all messages chronologically
+      allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-
-
-//send message
-
-router.post('/messages/send', authenticateToken, async (req, res) => {
-  const { user_id } = req.user;
-  const { message_body } = req.body;
-
-  try {
-    const lastAssignedMessage = await pool.query(
-      'SELECT agent_id FROM messages WHERE user_id = $1 AND status = $2 ORDER BY timestamp DESC LIMIT 1',
-      [user_id, 'assigned']
-    );
-
-    let agentId = null;
-    if (lastAssignedMessage.rows.length > 0) {
-      agentId = lastAssignedMessage.rows[0].agent_id;
+      res.json({ messages: allMessages });
+    } catch (err) {
+      console.error('Error fetching messages and responses:', err.message);
+      res.status(500).json({ error: 'Server error' });
     }
+  });
 
-    const result = await pool.query(
-      'INSERT INTO messages (user_id, agent_id, message_body, status) VALUES ($1, $2, $3, $4) RETURNING *',
-      [user_id, agentId, message_body, agentId ? 'assigned' : 'unassigned']
-    );
+  // Send message (User sends message)
 
-    res.status(201).json({ message: 'Message sent', data: result.rows[0] });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+  router.post('/messages/send', authenticateToken, async (req, res) => {
+    const { user_id } = req.user;
+    const { message_body } = req.body;
 
+    try {
+      const lastAssignedMessage = await pool.query(
+        'SELECT agent_id FROM messages WHERE user_id = $1 AND status = $2 ORDER BY timestamp DESC LIMIT 1',
+        [user_id, 'assigned']
+      );
+
+      let agentId = null;
+      if (lastAssignedMessage.rows.length > 0) {
+        agentId = lastAssignedMessage.rows[0].agent_id;
+      }
+
+      const result = await pool.query(
+        'INSERT INTO messages (user_id, agent_id, message_body, status) VALUES ($1, $2, $3, $4) RETURNING *',
+        [user_id, agentId, message_body, agentId ? 'assigned' : 'unassigned']
+      );
+
+      // Emit the new message via Socket.IO
+      io.emit('new_message', result.rows[0]);
+
+      res.status(201).json({ message: 'Message sent', data: result.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 
 // Agent views unassigned messages route
 
-router.get('/unassigned-messages', authenticateToken, async (req, res) => {
+  router.get('/unassigned-messages', authenticateToken, async (req, res) => {
     const { agent_id } = req.user;
 
     if (!agent_id) {
-        return res.status(403).json({ error: 'Access denied, only agents can view unassigned messages' });
+      return res.status(403).json({ error: 'Access denied, only agents can view unassigned messages' });
     }
 
     try {
-        const result = await pool.query(
+      const result = await pool.query(
         `SELECT u.user_id, u.username, m.message_id 
         FROM messages m 
         JOIN users u ON u.user_id = m.user_id 
@@ -172,107 +174,110 @@ router.get('/unassigned-messages', authenticateToken, async (req, res) => {
         ['unassigned']
       );
       res.json({ unassignedMessages: result.rows });
-  }
-    catch (err) {
-        console.log(err.message);
-        res.status(500).json({ error: 'Server error, unable to fetch unassigned messages' });
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({ error: 'Server error, unable to fetch unassigned messages' });
     }
-});
+  });
 
+// Agent assigns message and responds
 
-// Agent assigns message and respond route
+  router.post('/respond-and-assign', authenticateToken, async (req, res) => {
+    const { agent_id } = req.user;
+    const { user_id, response_body } = req.body;
 
-router.post('/respond-and-assign', authenticateToken, async (req, res) => {
-  const { agent_id } = req.user;  
-  const { user_id, response_body } = req.body;  
-
-  if (!agent_id) {
-    return res.status(403).json({ error: 'Access denied: Only agents can respond to messages' });
-  }
-
-  try {
-    const unassignedMessages = await pool.query(
-      'SELECT message_id FROM messages WHERE user_id = $1 AND status = $2',
-      [user_id, 'unassigned']
-    );
-
-    if (unassignedMessages.rows.length === 0) {
-      return res.status(404).json({ error: 'No unassigned messages from this user' });
+    if (!agent_id) {
+      return res.status(403).json({ error: 'Access denied: Only agents can respond to messages' });
     }
 
-    await pool.query(
-      'UPDATE messages SET agent_id = $1, status = $2 WHERE user_id = $3 AND status = $4',
-      [agent_id, 'assigned', user_id, 'unassigned']
-    );
+    try {
+      const unassignedMessages = await pool.query(
+        'SELECT message_id FROM messages WHERE user_id = $1 AND status = $2',
+        [user_id, 'unassigned']
+      );
 
-    const response = await pool.query(
-      'INSERT INTO responses (message_id, agent_id, response_body) VALUES ($1, $2, $3) RETURNING *',
-      [unassignedMessages.rows[0].message_id, agent_id, response_body]
-    );
+      if (unassignedMessages.rows.length === 0) {
+        return res.status(404).json({ error: 'No unassigned messages from this user' });
+      }
 
-    res.json({ message: 'Response saved and user assigned to you', data: response.rows[0] });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+      await pool.query(
+        'UPDATE messages SET agent_id = $1, status = $2 WHERE user_id = $3 AND status = $4',
+        [agent_id, 'assigned', user_id, 'unassigned']
+      );
+
+      const response = await pool.query(
+        'INSERT INTO responses (message_id, agent_id, response_body) VALUES ($1, $2, $3) RETURNING *',
+        [unassignedMessages.rows[0].message_id, agent_id, response_body]
+      );
+
+      // Emit the response via Socket.IO
+      io.emit('new_response', response.rows[0]);
+
+      res.json({ message: 'Response saved and user assigned to you', data: response.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 
 // Agent responds to an already assigned message
 
-router.post('/messages/respond-by-user', authenticateToken, async (req, res) => {
-  const { agent_id } = req.user;  
-  const { user_id, response_body } = req.body;  
+  router.post('/messages/respond-by-user', authenticateToken, async (req, res) => {
+    const { agent_id } = req.user;
+    const { user_id, response_body } = req.body;
 
-  if (!agent_id) {
-    return res.status(403).json({ error: 'Access denied: Only agents can respond to messages' });
-  }
-
-  try {
-    const lastAssignedMessage = await pool.query(
-      'SELECT agent_id FROM messages WHERE user_id = $1 AND status = $2 ORDER BY timestamp DESC LIMIT 1',
-      [user_id, 'assigned']
-    );
-
-    if (lastAssignedMessage.rows.length === 0 || lastAssignedMessage.rows[0].agent_id !== agent_id) {
-      return res.status(403).json({ error: 'You are not authorized to respond to this user\'s messages' });
+    if (!agent_id) {
+      return res.status(403).json({ error: 'Access denied: Only agents can respond to messages' });
     }
 
-    const response = await pool.query(
-      'INSERT INTO responses (message_id, agent_id, response_body) VALUES ((SELECT message_id FROM messages WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1), $2, $3) RETURNING *',
-      [user_id, agent_id, response_body]
-    );
+    try {
+      const lastAssignedMessage = await pool.query(
+        'SELECT agent_id FROM messages WHERE user_id = $1 AND status = $2 ORDER BY timestamp DESC LIMIT 1',
+        [user_id, 'assigned']
+      );
 
-    res.json({ message: 'Response sent successfully', data: response.rows[0] });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+      if (lastAssignedMessage.rows.length === 0 || lastAssignedMessage.rows[0].agent_id !== agent_id) {
+        return res.status(403).json({ error: 'You are not authorized to respond to this user\'s messages' });
+      }
 
-// Fetch assigned users for an agent
+      const response = await pool.query(
+        'INSERT INTO responses (message_id, agent_id, response_body) VALUES ((SELECT message_id FROM messages WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1), $2, $3) RETURNING *',
+        [user_id, agent_id, response_body]
+      );
 
-router.get('/agents/assigned-users', authenticateToken, async (req, res) => {
-  const { agent_id } = req.user;
+      // Emit the response via Socket.IO
+      io.emit('new_response', response.rows[0]);
 
-  if (!agent_id) {
-    return res.status(403).json({ error: 'Access denied, missing agent ID' });
-  }
+      res.json({ message: 'Response sent successfully', data: response.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 
-  try {
-    // Fetching distinct users that are assigned to this agent from the messages table
-    const result = await pool.query(
-      `SELECT DISTINCT u.user_id, u.username
-       FROM messages m
-       JOIN users u ON u.user_id = m.user_id
-       WHERE m.agent_id = $1 AND m.status = $2`,
-      [agent_id, 'assigned']
-    );
-    res.json({ users: result.rows });
-  } catch (err) {
-    console.error('Error fetching assigned users:', err.message, err.stack);
-    res.status(500).json({ error: 'Server error fetching assigned users' });
-  }
-});
+  // Fetch assigned users for an agent
+  router.get('/agents/assigned-users', authenticateToken, async (req, res) => {
+    const { agent_id } = req.user;
 
+    if (!agent_id) {
+      return res.status(403).json({ error: 'Access denied, missing agent ID' });
+    }
 
-module.exports = router;
+    try {
+      // Fetching distinct users that are assigned to this agent from the messages table
+      const result = await pool.query(
+        `SELECT DISTINCT u.user_id, u.username
+         FROM messages m
+         JOIN users u ON u.user_id = m.user_id
+         WHERE m.agent_id = $1 AND m.status = $2`,
+        [agent_id, 'assigned']
+      );
+      res.json({ users: result.rows });
+    } catch (err) {
+      console.error('Error fetching assigned users:', err.message, err.stack);
+      res.status(500).json({ error: 'Server error fetching assigned users'});
+    }
+  });
+
+    return router;
+  };

@@ -14,7 +14,8 @@ const SignUp = () => {
       const response = await axios.post(`http://localhost:5000/${role}/signup`, {
         username,
         password
-      });
+      }, 
+      {withCredentials: true},);
 
       if (response.status === 201) {
         alert('Sign up successful! Please log in.');
