@@ -120,11 +120,15 @@ The user can then continue the conversation, and all message history will be pre
 ## Additional Functionalities Implemented
 In addition to the core requirements specified for this assignment, I have implemented the following features to enhance the functionality of the messaging application:
 
+### Real-Time Communication:
+* Users and Agents can send and receive messages in real-time. When a user sends a message, it is immediately visible to the agent and when the agent responds, it is immediately visible to the user, without refreshing the page.
+* This is achieved using Socket.IO, which establishes a WebSocket connection between the client and the server to provide real time updates.
+
 ### Authentication for Both Agents and Customers:
 
-Implemented user authentication for both agents and customers using JWT (JSON Web Tokens).
-Customers can sign up and log in to see their previous message history.
-Agents can sign up and log in to access the portal where they can view assigned and unassigned messages.
+* Implemented user authentication for both agents and customers using JWT (JSON Web Tokens).
+* Customers can sign up and log in to see their previous message history.
+* Agents can sign up and log in to access the portal where they can view assigned and unassigned messages.
 
 ### Messaging Interface for Customers:
 
@@ -145,5 +149,5 @@ Implemented UI interactions that provide real-time feedback, such as automatic u
 
 ### Secure Hashing for Passwords:
 
-Integrated secure password storage using bcrypt for both agents and customers to ensure security for user credentials.
-These functionalities go beyond the basic requirements, offering a more robust and user-friendly experience for both agents and customers while ensuring security and ease of communication within the system.
+* Integrated secure password storage using bcrypt for both agents and customers to ensure security for user credentials.
+* These functionalities go beyond the basic requirements, offering a more robust and user-friendly experience for both agents and customers while ensuring security and ease of communication within the system.
