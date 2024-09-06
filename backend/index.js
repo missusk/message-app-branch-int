@@ -5,13 +5,14 @@ const routes = require('./routes');
 const cors = require('cors');
 const socketio = require('socket.io');
 dotenv.config();
+const PORT = process.env.PORT || 5000;
 
 
 const app = express();
 const server = http.createServer(app);
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: `${FRONT_END_URL}`,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
 }));
@@ -35,6 +36,6 @@ io.on('connection', (socket) => {
 
 app.use('/', routes(io));
 
-server.listen(5000, () => { 
-    console.log('Server is running on port 5000');
+server.listen(PORT, () => { 
+    console.log(`Server is running on port ${PORT}`);
 });

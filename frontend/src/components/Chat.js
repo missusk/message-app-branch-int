@@ -4,7 +4,7 @@ import axios from 'axios';
 import '../styles/Chat.css'; 
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:5000', {
+const socket = io(`${process.env.REACT_APP_API_URL}`, {
   withCredentials: true,
   transports: ['websocket'],
 });
@@ -18,7 +18,7 @@ const Chat = () => {
   useEffect(() => {
     const fetchChatHistory = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/messages/${userId}`, {   
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/messages/${userId}`, {   
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -48,7 +48,7 @@ const Chat = () => {
   const handleSendMessage = async () => {
     try {
       const response = await axios.post(
-        `http://localhost:5000/messages/send`,
+        `${process.env.REACT_APP_API_URL}/messages/send`,
         { message_body: newMessage },
         { 
           headers: {
@@ -61,7 +61,7 @@ const Chat = () => {
       setNewMessage('');
 
       // Update the chat history with the new message
-      
+
       setMessages((prevMessages) => [
         ...prevMessages,
         {
